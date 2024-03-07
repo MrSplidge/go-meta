@@ -1,0 +1,66 @@
+{
+  "ffmpeg_path": "c:/users/mrsplidge/bin/ffmpeg/bin/ffmpeg.exe",
+  "input_path": "h:/music/renders",
+  "output_path": "h:/music/renders/albums",
+  "output_extensions": [
+    "mp3",
+    "flac",
+    "ogg"
+  ],
+  "parallel": true,
+  "albums": [
+    {
+      "title": "Fruit",
+      "composer": "The Composer",
+      "artist": "The Composer",
+      "genre": "Electronic",
+      "date": "2023",
+      "cover": "Artwork/Fruit.png",
+      "copyright": "Copyright (c) 2023 The Composer",
+      "tracks": [
+        {
+          "rendered_file": "30",
+          "title": "Apple"
+        },
+        {
+          "rendered_file": "31",
+          "title": "Pear"
+        },
+        {
+          "rendered_file": "32",
+          "title": "Banana"
+        }
+      ]
+    },
+    {
+      "title": "Directions",
+      "composer": "The Composer",
+      "artist": "The Composer",
+      "genre": "Electronic",
+      "date": "2024",
+      "cover": "Artwork/Directions.png",
+      "copyright": "Copyright (c) 2024 The Composer",
+      "tracks": [
+        {
+          "copyright": "Copyright (c) 2022 The Composer",
+          "rendered_file": "33",
+          "title": "Left"
+        },
+        {
+          "genre": "Ambient",
+          "rendered_file": "34",
+          "title": "Right"
+        },
+        {
+          "rendered_file": "35",
+          "title": "Up"
+        },
+        {
+          "cover": "Artworn/Down.png",
+          "rendered_file": "35",
+          "title": "Down"
+        }
+      ]
+    }
+  ]
+}

@@ -61,7 +61,7 @@ func main() {
 	flag.Parse()
 
 	if flag.NArg() < 1 {
-		fmt.Fprintf(os.Stderr, "go-meta [-num-threads] <metadata.json>\n\n")
+		fmt.Fprintf(os.Stderr, "go-meta [-num-threads <n>] <metadata.json>\n\n")
 		flag.PrintDefaults()
 		return
 	}
@@ -100,9 +100,8 @@ func main() {
 		return
 	}
 
-	var workItems []WorkItem
-
 	// Collect WorkItem instances for all albums.
+	var workItems []WorkItem
 	for _, album := range metadata.Albums {
 		albumWorkItems := processAlbum(metadata, album, metadataModTime)
 		workItems = append(workItems, albumWorkItems...)
@@ -111,22 +110,31 @@ func main() {
 	// Convert path separators to native type.
 	ffmpegCommand := filepath.FromSlash(metadata.FfmpegPath)
 
+	fmt.Printf("Processing %d track(s)\n", len(workItems))
+
 	// Process the work items and report completion or errors.
 	coutil.WorkPool(
 		*numThreadsFlag,
 		workItems,
 		func(item WorkItem) WorkItem {
+			//fmt.Println(formatCommand(ffmpegCommand, item.Args))
+			//fmt.Println()
+
 			cmd := exec.Command(ffmpegCommand, item.Args...)
 
 			// Collect stderr into a string Builder.
 			var stderrStringBuilder strings.Builder
 			cmd.Stderr = &stderrStringBuilder
+			var stdoutStringBuilder strings.Builder
+			cmd.Stdout = &stdoutStringBuilder
 
 			err = cmd.Run()
 
 			if err != nil {
+				stdout := stdoutStringBuilder.String()
+				stderr := stderrStringBuilder.String()
 				// Record launch error
-				item.Error = fmt.Errorf("error: %s (file in use?): %s", item.Task, err)
+				item.Error = fmt.Errorf("error: %s: %s (%s)", item.Task, err, formatOutAndError(stdout, stderr))
 			} else {
 				// Check ffmpeg exit code. Record stderr text if we have a non-zero exit code.
 				if cmd.ProcessState.ExitCode() != 0 {
@@ -137,7 +145,7 @@ func main() {
 		},
 		func(item WorkItem) {
 			if item.Error != nil {
-				fmt.Fprintf(os.Stderr, "%s", item.Error)
+				fmt.Fprintf(os.Stderr, "%s\n", item.Error)
 			} else {
 				fmt.Printf("%s\n", item.Task)
 			}
@@ -196,18 +204,19 @@ func processAlbum(metadata Metadata, album Album, metadataModTime time.Time) []W
 				// Check whether the existing target file is more recent than the metadata or input rendered file.
 				targetModTime := targetStat.ModTime()
 				if targetModTime.After(inputRenderedStat.ModTime()) && targetModTime.After(metadataModTime) {
-					fmt.Printf("Skipping %s\n", targetPath)
+					fmt.Printf("Skipping %s (is more recent)\n", targetPath)
 					continue
 				}
 			}
 
 			// Construct arguments for ffmpeg.exe
-			args := []string{"-loglevel", "quiet", "-y", "-i", inputRenderedPath}
+			args := []string{"-loglevel", "error", "-y", "-i", inputRenderedPath}
 
-			if len(album.Cover) > 0 {
+			coverArt := override(album.Cover, track.Cover)
+			if len(coverArt) > 0 {
 				// No cover art for WAV.
 				if extension != "wav" {
-					args = append(args, "-i", filepath.FromSlash(override(album.Cover, track.Cover)), "-disposition:v", "attached_pic", "-metadata:s:v", "title=Album Cover", "-metadata:s:v", "comment=Cover (Front)")
+					args = append(args, "-i", filepath.FromSlash(coverArt), "-disposition:v", "attached_pic", "-metadata:s:v", "title=Album Cover", "-metadata:s:v", "comment=Cover (Front)")
 				}
 				// MP3-specific tags.
 				if extension == "mp3" {
@@ -264,4 +273,43 @@ func override(basic string, override *string) string {
 	} else {
 		return basic
 	}
+}
+
+// Convert stdout and stderr messages from ffmpeg into something a bit tidier.
+func formatOutAndError(stdout, stderr string) string {
+	output := []string{}
+
+	if len(stdout) > 0 {
+		output = append(output, strings.ReplaceAll(strings.Trim(stdout, "\r\n"), "\r\n", ", "))
+	}
+	if len(stderr) > 0 {
+		output = append(output, strings.ReplaceAll(strings.Trim(stderr, "\r\n"), "\r\n", ", "))
+	}
+
+	return strings.Join(output, ", ")
+}
+
+// Returns a quoted copy of a string if it contains a space character, or the string itself if not.
+func quote(thing string) string {
+	if strings.Contains(thing, " ") {
+		return `"` + thing + `"`
+	} else {
+		return thing
+	}
+}
+
+// Returns a string that shows a command followed by a potentially-quoted argument list.
+func formatCommand(command string, args []string) string {
+	var sb strings.Builder
+
+	sb.WriteString(quote(command))
+
+	copy := []string{}
+	for _, arg := range args {
+		copy = append(copy, quote(arg))
+	}
+
+	sb.WriteString(" " + strings.Join(copy, " "))
+
+	return sb.String()
 }
