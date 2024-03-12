@@ -4,7 +4,6 @@ The go-meta utility can be used to convert rendered WAV files to other formats (
 
 # Building
 
-* ```go get```
 * ```go build```
 
 # Usage
@@ -127,4 +126,4 @@ Please see the included BSD 3-clause LICENSE file.
 
 This program makes use of the following third-party packages. Please refer to these projects for additional licensing information.
 
-github.com/MrSplidge/go-coutil v0.0.0 (BSD 3-clause)
+github.com/MrSplidge/go-coutil v1.0.0 (BSD 3-clause)
